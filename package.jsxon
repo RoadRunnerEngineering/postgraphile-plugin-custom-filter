@@ -1,0 +1,24 @@
+{
+  "name": "postgraphile-plugin-custom-filter",
+  "version": "1.0.0",
+  "description": "Customized filter on Connections in postgraphile",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hansololai/postgraphile-plugin-custom-filter.git"
+  },
+  "author": "Han Lai",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hansololai/postgraphile-plugin-custom-filter/issues"
+  },
+  "dependencies": {
+    "graphile-build-pg": "^4.0.0-beta.6"
+  },
+  "peerDependencies": {
+    "postgraphile": "^4.0.0-beta.8"
+  },
+  "files": [
+    "src"
+  ]
+}

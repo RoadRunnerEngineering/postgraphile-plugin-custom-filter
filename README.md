@@ -44,6 +44,7 @@ allUsers(first:10,CustomFilter:{...}){
 `
 Suppose the User is associated with a role with a role_id field. And Role have a column called role_name. You want to get all users that has role_name='admin'. This is hard to do because postgraphile does not support filter based on nested object attributes. 
 If you know the role_id, say
+
 | id        | name  | 
 | --------- |:-----:| 
 | 1         | admin | 

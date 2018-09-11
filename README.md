@@ -3,14 +3,32 @@ plugin for postgraphile that adds customized filter
 
 Inspired by the postgraphile connection filter plugin, this plugin is to add a "CustomFilter" object in each of the Connection Arguments. Just by appending this plugin, the CustomFilter would be empty. It requires the user to add some code for the custom filters. 
 
-The plugin requires the user to code up the logic of custom filter yourself. When using this plugin, an option parameter must be specified. Currently the option parameter only needs a filters attribute, which consist of an array of filter, each with 4 fields. 
+The plugin requires the user to code up the logic of custom filter yourself. When using this plugin, an option parameter must be specified. Currently the option parameter only needs a filters attribute, which consist of an object that describes all the filters to all the models. The structure of filter is
+
+```
+filter = {
+  modelName:{
+    fieldName:{
+      fieldType:'String'|'Boolean'|'Int'|'Float',
+      modifier:()=>{}
+    }
+  }
+}
+```
+This setup ensures that for each Model there's one object, and in that object, we add multiple fieldNames, for each fieldName, it should only have one object. This avoid adding duplicated fieldNames for different purposes. 
+
 ```
 const plugin = require('postgraphile-plugin-custom-filter');
 
 const options = {
-  filters:[
-    {modelName:'User', fieldName:'foo',fieldType:'String',modifier:(queryBuilder, value, build)=>{console.log(value)}}
-  ]
+  filters:{
+    User:{
+      foo:{
+        fieldType:'String',
+        modifier:(queryBuilder, value, build)=>{console.log(value)}
+      }
+    }
+  }
 }
 
 buildPlugin = (build)=>{
@@ -65,11 +83,13 @@ We can use this customized filter, let's add a field roleName.
 
 ```
 const filter = {
-  modelName:'User',
-  fieldName:'byRoleName',
-  fieldType:'String',
-  modifier: (queryBuilder, value, build)=>{
-    // I'll get into it later
+  User:{
+    byRoleName:{
+      fieldType:'String',
+      modifier: (queryBuilder, value, build)=>{
+      // I'll get into it later
+      }
+    }
   }
 }
 ```
@@ -129,6 +149,6 @@ queryBuilder.sortBy(pgSql.query`select name from roles where roles.id = ${queryB
 This will add a sorter to sort it by the role name. 
 
 
-So if you have correct put these 4 fields, then custom filter should be added to your graphQL server. 
+
 
 

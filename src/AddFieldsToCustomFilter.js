@@ -21,9 +21,8 @@ const pluralize = require('pluralize');
  * pgSql
  * 4. context, this is not as useful, but passing it in just in case.
  */
-module.export = function AddFieldsToCustomFilter(builder, options) {
+module.exports = function AddFieldsToCustomFilter(builder, options) {
   const { filters } = options;
-
 
   builder.hook('GraphQLInputObjectType:fields', (_, build, context) => {
     const {

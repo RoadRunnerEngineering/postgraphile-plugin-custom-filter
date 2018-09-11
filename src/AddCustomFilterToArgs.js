@@ -1,4 +1,4 @@
-module.export = function addStandardFilterToArgs(builder) {
+module.exports = function addStandardFilterToArgs(builder) {
   builder.hook('init', (_, build) => {
     const {
       newWithHooks,

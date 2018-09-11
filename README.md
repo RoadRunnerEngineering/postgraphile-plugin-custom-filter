@@ -146,8 +146,48 @@ Even though this plugin is called custom filter, it really opens up a lot of pos
 ```
 queryBuilder.sortBy(pgSql.query`select name from roles where roles.id = ${queryBuilder.getTableAlias()}.${pgSql.identifier("role_id")}`)
 ```
-This will add a sorter to sort it by the role name. 
+This will add a sorter to sort it by the role name. Of course you'll remember to not specify other orderBy.
+A full example of sort by nested fields
 
+```
+const filter = {
+  User:{
+    sortByRoleName:{
+      fieldType:'String',
+      modifier: (queryBuilder, value, build)=>{
+        if(value){
+          queryBuilder.sortBy(pgSql.query`
+          select name from roles where roles.id = ${queryBuilder.getTableAlias()}. ${pgSql.identifier("role_id")}
+          `,true) // true/false means asc/desc        
+        }
+      }
+    }
+  }
+}
+```
+Then if you do a query
+```
+allUsers(orderBy:[],customFilter:{
+  sortByRoleName:true
+}){
+  node{
+    name
+  }
+}
+```
+Then you'll be able to see the list of users that's sorted by the role name. However, if you do
+```
+allUsers(orderBy:PRIMARY_KEY_ASC,customFilter:{
+  sortByRoleName:true
+}){
+  node{
+    name
+  }
+}
+```
+Then you won't be able to see the user list in correct order. 
+
+(Notice the orderBy:[], it is important to NOT specify any other orderBy). The "orderBy" function allows you to specify true/false as direction. If you do not specify order is unique, (queryBuilder.orderIsUnique()). Then it will append the PRIMARY_KEY as a back up order after the initial order, which ensure the order is unique.
 
 
 

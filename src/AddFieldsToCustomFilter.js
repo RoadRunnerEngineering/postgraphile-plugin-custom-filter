@@ -1,18 +1,60 @@
 const pluralize = require('pluralize');
+
+
+const ensureTypeExist = (fieldType, build) => {
+  const {
+    getTypeByName,
+    graphql: {
+      GraphQLString,
+      GraphQLBoolean,
+      GraphQLFloat,
+      GraphQLInt,
+    },
+    addType,
+  } = build;
+  let TableFilterType = getTypeByName(fieldType);
+  if (TableFilterType == null) {
+    switch (fieldType) {
+      case 'Boolean': {
+        TableFilterType = GraphQLBoolean;
+        break;
+      }
+      case 'String': {
+        TableFilterType = GraphQLString;
+        break;
+      }
+      case 'Int': {
+        TableFilterType = GraphQLInt;
+        break;
+      }
+      case 'Float': {
+        TableFilterType = GraphQLFloat;
+        break;
+      }
+      default:
+        TableFilterType = null;
+    }
+    if (TableFilterType) {
+      addType(TableFilterType);
+    }
+  }
+  return TableFilterType;
+};
 /**
  * @description Add fields to the CustomFilter object. This function is put into the plugin
  * of postgraphile. It requires an options parameter, which the user specifies filters
  * @param {Object} builder The builder object provided by postgraphile
  * @param {Object} options A option object that consist information about the filters
- * @param {Array} options.filter This is required in options to build any filter. It should be an
- * Array of filter object. Each filter object should have 4 attributes.
- * @param {Object} optiosn.filter[0] A object that consist of a filter. It should have 4 fields
- * @param {String} options.filter[0].modelName The model name, eg. User
- * @param {String} options.filter[0].fieldName  The name of the newly added field. Make sure this
- * field is not conflict with any other arguments
- * @param {String} options.filter[0].fieldType  Type of field, supports "String", "Boolean", "Int"
- * @param {Function} modifier The function that act as handler for the query, it is passed
- * three arguments
+ * @param {Object} options.filter This is required in options to build any filter. It should be an
+ * Object with key-value pairs. key represent the model name, e.g. 'User'. value is the filter on
+ * that model.
+ * @param {Object} optiosn.filter[modelName] An object with key-value pairs for one model. The key
+ * represent the field name, the value is an object.
+ * @param {String} options.filter[modelName][fieldName] An object that should have three attributes.
+ * @param {String} options.filter[modelName][fieldName].fieldType the fieldType, which is a string
+ * represent the type of the filter value. e.g. { fieldType:'String'} or {fieldType:'Boolean'}
+ * @param {Function} options.filter[modelName][fieldName].modifier The function that act as handler
+ * for the query, it is passed three arguments
  * 1. queryBuilder, this is the builder object that stores the current sql build, use the object
  *   functions such as queryBuilder.where...
  * @link https://github.com/graphile/pg-sql2/blob/master/README.md
@@ -20,6 +62,8 @@ const pluralize = require('pluralize');
  * 3. build, this object contains a lot of helpers to construct query, the most important one is
  * pgSql
  * 4. context, this is not as useful, but passing it in just in case.
+ * @param {Object} options.filter[modelName][fieldName].options An option object that provice flexibility.
+ * Current support descritipn attribute
  */
 module.exports = function AddFieldsToCustomFilter(builder, options) {
   const { filters } = options;
@@ -27,56 +71,26 @@ module.exports = function AddFieldsToCustomFilter(builder, options) {
   builder.hook('GraphQLInputObjectType:fields', (_, build, context) => {
     const {
       extend,
-      getTypeByName,
-      graphql: {
-        GraphQLString,
-        GraphQLBoolean,
-        GraphQLFloat,
-        GraphQLInt,
-      },
-      addType,
     } = build;
     const {
       Self: {
         name,
       },
     } = context;
-    // Look for filters
-    const filterList = filters.filter(f => name === `${f.modelName}CustomFilter`);
-    // Skip the ones that are not the target
-    if (filterList.length < 1) return _;
+    // It should be a CustomFilter Type
+    if (!name.endsWith('CustomFilter')) return _;
+
+    const modelName = name.substring(0, name.length - 12);// Use substring instead of replace
+    const filterForModel = filters[modelName];
+    // Skip it if it's not the right model
+    if (!filterForModel) return _;
     const customFilter = {};
-    filterList.forEach((filter) => {
+    Object.entries(filterForModel).forEach(([fieldName, filter]) => {
       const {
-        fieldName, fieldType, option,
+        fieldType, options: filterOptions,
       } = filter;
-      const { description = `${fieldType} in custom filter` } = (option || {});
-      let TableFilterType = getTypeByName(fieldType);
-      if (TableFilterType == null) {
-        switch (fieldType) {
-          case 'Boolean': {
-            TableFilterType = GraphQLBoolean;
-            break;
-          }
-          case 'String': {
-            TableFilterType = GraphQLString;
-            break;
-          }
-          case 'Int': {
-            TableFilterType = GraphQLInt;
-            break;
-          }
-          case 'Float': {
-            TableFilterType = GraphQLFloat;
-            break;
-          }
-          default:
-            TableFilterType = null;
-        }
-        if (TableFilterType) {
-          addType(TableFilterType);
-        }
-      }
+      const { description = `${fieldType} in custom filter` } = (filterOptions || {});
+      const TableFilterType = ensureTypeExist(fieldType, build);
       if (TableFilterType) {
         // Add this filter to the customFilter object
         customFilter[fieldName] = {
@@ -99,16 +113,6 @@ module.exports = function AddFieldsToCustomFilter(builder, options) {
     'GraphQLObjectType:fields:field:args',
     (args, build, context) => {
       const {
-        addType,
-        getTypeByName,
-        graphql: {
-          GraphQLString,
-          GraphQLInt,
-          GraphQLFloat,
-          GraphQLBoolean,
-        },
-      } = build;
-      const {
         scope: {
           isPgFieldConnection,
           isPgFieldSimpleCollection,
@@ -128,54 +132,28 @@ module.exports = function AddFieldsToCustomFilter(builder, options) {
       }
       const returnName = field.type.ofType ? field.type.ofType.name : field.type.name;
       // Only add it to the spedified connection
-      // like 'LocationsConnection'
+      // like 'UsersConnection' (notice it's plural)
+      if (!returnName.endsWith('Connection')) return args;
+      const modelName = pluralize.singular(returnName.substring(0, returnName.length - 10));
+      const filterForModel = filters[modelName];
+      // Skip it if it's not the right model
+      if (!filterForModel) return args;
 
-      const filterList = filters.filter((f) => {
-        const connectionName = `${pluralize.plural(f.modelName)}Connection`;
-        return returnName === connectionName;
-      });
-      if (filterList.length < 1) return args;
-      filterList.forEach((filter) => {
-        const { fieldType, fieldName, modifier } = filter;
-        // Add filter argument for each Connection
-        let TableFilterType = getTypeByName(fieldType);
-        if (TableFilterType == null) {
-          switch (fieldType) {
-            case 'Boolean': {
-              TableFilterType = GraphQLBoolean;
-              break;
-            }
-            case 'String': {
-              TableFilterType = GraphQLString;
-              break;
-            }
-            case 'Int': {
-              TableFilterType = GraphQLInt;
-              break;
-            }
-            case 'Float': {
-              TableFilterType = GraphQLFloat;
-              break;
-            }
-            default:
-              TableFilterType = null;
-          }
-          if (TableFilterType) {
-            addType(TableFilterType);
-          }
-        }
-        if (!TableFilterType) {
-          return args;
-        }
+      Object.entries(filterForModel).forEach(([fieldName, filter]) => {
+        const { fieldType, modifier } = filter;
+
+        const TableFilterType = ensureTypeExist(fieldType, build);
+        if (TableFilterType) {
         // Generate SQL where clause from filter argument
-        addArgDataGenerator(({ customFilter }) => {
-          const { [fieldName]: value } = (customFilter || {});
-          return {
-            pgQuery: (queryBuilder) => {
-              modifier(queryBuilder, value, build, context);
-            },
-          };
-        });
+          addArgDataGenerator(({ customFilter }) => {
+            const { [fieldName]: value } = (customFilter || {});
+            return {
+              pgQuery: (queryBuilder) => {
+                modifier(queryBuilder, value, build, context);
+              },
+            };
+          });
+        }
       });
       return args;
     },

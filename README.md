@@ -189,6 +189,7 @@ Then you won't be able to see the user list in correct order.
 
 (Notice the orderBy:[], it is important to NOT specify any other orderBy). The "orderBy" function allows you to specify true/false as direction. If you do not specify order is unique, (queryBuilder.orderIsUnique()). Then it will append the PRIMARY_KEY as a back up order after the initial order, which ensure the order is unique.
 
-
+License MIT
+Contact hansolo<han.lai321@gmail.com>
 
 

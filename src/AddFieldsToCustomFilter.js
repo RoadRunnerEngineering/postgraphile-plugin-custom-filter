@@ -64,6 +64,8 @@ const ensureTypeExist = (fieldType, build) => {
  * 4. context, this is not as useful, but passing it in just in case.
  * @param {Object} options.filter[modelName][fieldName].options An option object that provice flexibility.
  * Current support descritipn attribute
+ * @author Han Lai<han@roadrunnerwm.com>
+ * @author Adam Darr<adarr@roadrunnerwm.com>
  */
 module.exports = function AddFieldsToCustomFilter(builder, options) {
   const { filters } = options;

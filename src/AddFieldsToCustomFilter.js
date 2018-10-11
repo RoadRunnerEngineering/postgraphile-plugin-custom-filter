@@ -1,5 +1,52 @@
 const pluralize = require('pluralize');
 
+/**
+ * @summary Returns field type inside list if given field type is a list
+ * @param fieldType
+ * @returns {*}
+ */
+const getListType = (fieldType) => {
+  if (fieldType.startsWith('[') && fieldType.endsWith(']')) {
+    return fieldType.slice(1, -1);
+  }
+  return null;
+};
+
+/**
+ * @summary Returns field type without ! if given field type is a non-null
+ * @param fieldType
+ * @returns {*}
+ */
+const getNonNullType = (fieldType) => {
+  if (fieldType.endsWith('!')) {
+    return fieldType.slice(0, -1);
+  }
+  return null;
+};
+
+/**
+ * @summary Given a field type, returns base field and
+ * information about whether it is a list or non null
+ * @param type
+ * @returns {{isList: boolean, isNonNull: boolean, isNonNullList: boolean, fieldType: *}}
+ */
+const getTypeInfo = (type) => {
+  const nonNullType = getNonNullType(type);
+  let fieldType = nonNullType || type;
+
+  const listType = getListType(fieldType);
+  fieldType = listType || fieldType;
+
+  const nonNullListType = getNonNullType(fieldType);
+  fieldType = nonNullListType || fieldType;
+
+  return {
+    isList: !!listType,
+    isNonNull: !!nonNullType,
+    isNonNullList: !!nonNullListType,
+    fieldType,
+  };
+};
 
 const ensureTypeExist = (fieldType, build) => {
   const {
@@ -9,12 +56,16 @@ const ensureTypeExist = (fieldType, build) => {
       GraphQLBoolean,
       GraphQLFloat,
       GraphQLInt,
+      GraphQLList,
+      GraphQLNonNull,
     },
     addType,
   } = build;
-  let TableFilterType = getTypeByName(fieldType);
+  const typeInfo = getTypeInfo(fieldType);
+
+  let TableFilterType = getTypeByName(typeInfo.fieldType);
   if (TableFilterType == null) {
-    switch (fieldType) {
+    switch (typeInfo.fieldType) {
       case 'Boolean': {
         TableFilterType = GraphQLBoolean;
         break;
@@ -34,10 +85,24 @@ const ensureTypeExist = (fieldType, build) => {
       default:
         TableFilterType = null;
     }
+
     if (TableFilterType) {
       addType(TableFilterType);
     }
   }
+
+  if (TableFilterType && typeInfo.isNonNull) {
+    TableFilterType = GraphQLNonNull(TableFilterType);
+  }
+
+  if (TableFilterType && typeInfo.isList) {
+    TableFilterType = GraphQLList(TableFilterType);
+
+    if (typeInfo.isNonNullList) {
+      TableFilterType = GraphQLNonNull(TableFilterType);
+    }
+  }
+
   return TableFilterType;
 };
 /**
@@ -125,10 +190,10 @@ module.exports = function AddFieldsToCustomFilter(builder, options) {
       } = context;
       const shouldAddFilter = isPgFieldConnection || isPgFieldSimpleCollection;
       if (
-        !shouldAddFilter ||
-        !source ||
-        (source.kind !== 'class' &&
-          (source.kind !== 'procedure'))
+        !shouldAddFilter
+        || !source
+        || (source.kind !== 'class'
+          && (source.kind !== 'procedure'))
       ) {
         return args;
       }

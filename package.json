@@ -1,6 +1,6 @@
 {
   "name": "postgraphile-plugin-custom-filter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Customized filter on Connections in postgraphile",
   "main": "index.js",
   "repository": {

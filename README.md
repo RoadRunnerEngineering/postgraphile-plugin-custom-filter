@@ -149,7 +149,7 @@ modifier = (queryBuilder, value, build) => {
 #### Tricks
 Even though this plugin is called custom filter, it really opens up a lot of possibilities because you are exposed to the queryBuilder, the key of the queries. You could also sort it with
 ```javascript
-queryBuilder.sortBy(pgSql.query`select name from roles where roles.id = ${queryBuilder.getTableAlias()}.${pgSql.identifier('role_id')}`);
+queryBuilder.orderBy(pgSql.query`(select name from roles where roles.id = ${queryBuilder.getTableAlias()}.${pgSql.identifier('role_id')})`);
 ```
 This will add a sorter to sort it by the role name. Of course you'll remember to not specify other orderBy.
 A full example of sort by nested fields
@@ -161,8 +161,8 @@ const filter = {
       fieldType: 'String',
       modifier: (queryBuilder, value, build) => {
         if (value) {
-          queryBuilder.sortBy(pgSql.query`
-          select name from roles where roles.id = ${queryBuilder.getTableAlias()}.${pgSql.identifier('role_id')}
+          queryBuilder.orderBy(pgSql.query`
+            (select name from roles where roles.id = ${queryBuilder.getTableAlias()}.${pgSql.identifier('role_id')})
           `, true); // true/false means asc/desc
         }
       },

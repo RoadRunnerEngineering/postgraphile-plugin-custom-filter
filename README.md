@@ -1,5 +1,5 @@
 # postgraphile-plugin-custom-filter
-plugin for postgraphile that adds customized filter
+Plugin for postgraphile that adds customized filter
 
 Inspired by the postgraphile connection filter plugin, this plugin is to add a "CustomFilter" object in each of the Connection Arguments. Just by appending this plugin, the CustomFilter would be empty. It requires the user to add some code for the custom filters.
 

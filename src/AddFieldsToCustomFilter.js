@@ -198,9 +198,9 @@ module.exports = function AddFieldsToCustomFilter(builder, options) {
         return args;
       }
       const returnName = field.type.ofType ? field.type.ofType.name : field.type.name;
-      // Only add it to the spedified connection
+      // Only add it to the specified connection
       // like 'UsersConnection' (notice it's plural)
-      if (!returnName.endsWith('Connection')) return args;
+      if (!returnName || !returnName.endsWith('Connection')) return args;
       const modelName = pluralize.singular(returnName.substring(0, returnName.length - 10));
       const filterForModel = filters[modelName];
       // Skip it if it's not the right model
